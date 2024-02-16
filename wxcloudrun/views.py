@@ -4,6 +4,7 @@ import logging
 from django.http import JsonResponse
 from django.shortcuts import render
 from wxcloudrun.models import Counters
+from wxcloudrun.draw import get_drawn
 
 
 logger = logging.getLogger("log")
@@ -42,6 +43,21 @@ def counter(request, _):
     return rsp
 
 
+def drawer(request, _):
+    rsp = JsonResponse(
+        {"code": 0, "errorMsg": ""}, json_dumps_params={"ensure_ascii": False}
+    )
+    if request.method == "POST" or request.method == "post":
+        rsp = get_drawn(request)
+    else:
+        rsp = JsonResponse(
+            {"code": -1, "errorMsg": "请求方式错误"},
+            json_dumps_params={"ensure_ascii": False},
+        )
+    logger.info("response result: {}".format(rsp.content.decode("utf-8")))
+    return rsp
+
+
 def get_count():
     """
     获取当前计数
@@ -68,7 +84,10 @@ def update_count(request):
     logger.info("update_count req: {}".format(request.body))
 
     body_unicode = request.body.decode("utf-8")
-    body = json.loads(body_unicode)
+    try:
+        body = json.loads(body_unicode)
+    except json.decoder.JSONDecodeError:
+        body = {}
 
     if "action" not in body:
         return JsonResponse(
